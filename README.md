@@ -247,6 +247,4 @@ This project is part of the AI20Labs technical assignment.
 
 For issues related to this assignment, please check the troubleshooting section above or refer to the deployment scripts for common solutions.
 
----
-
-**🎉 Congratulations!** Your Document Q&A system is now fully deployed and ready to use! 
+ 
