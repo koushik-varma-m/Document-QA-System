@@ -1,0 +1,23 @@
+# Python
+__pycache__/
+*.py[cod]
+*.so
+.Python
+env/
+venv/
+ENV/
+*.egg-info/
+dist/
+build/
+*.log
+
+# OS
+.DS_Store
+
+# Environment
+.env
+*.env
+
+# ChromaDB and temp
+chroma_data/
+temp/
