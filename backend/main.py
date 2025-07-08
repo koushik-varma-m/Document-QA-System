@@ -27,6 +27,10 @@ import chromadb
 
 load_dotenv()
 
+# Fix CORS origins definition
+# Allow all origins for now (for development; restrict in production)
+ALLOWED_ORIGINS = ["*"]
+
 MONGO_URI = os.getenv("MONGODB_URI", "mongodb://localhost:27017/")
 mongo = MongoClient(MONGO_URI)
 db = mongo.ai20labs
@@ -35,14 +39,10 @@ documents = db.documents  # New collection for document metadata
 
 app = FastAPI()
 
-origins = [
-    "http://localhost:3000",
-
-]
-
+# Use ALLOWED_ORIGINS directly as a list
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=origins,
+    allow_origins=ALLOWED_ORIGINS,
     allow_credentials=True,
     allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
     allow_headers=["*"],
@@ -61,8 +61,12 @@ try:
 
     Settings.llm = OpenAI(model="gpt-3.5-turbo", api_key=openai_api_key)
     Settings.embed_model = OpenAIEmbedding(api_key=openai_api_key, model="text-embedding-ada-002")
-    Settings.node_parser = SentenceSplitter(chunk_size=1024, chunk_overlap=20)
+    # Configurable chunk size for token optimization
+    CHUNK_SIZE = int(os.getenv("CHUNK_SIZE", "512"))
+    CHUNK_OVERLAP = int(os.getenv("CHUNK_OVERLAP", "10"))
+    Settings.node_parser = SentenceSplitter(chunk_size=CHUNK_SIZE, chunk_overlap=CHUNK_OVERLAP)
 
+    # Use local ChromaDB storage
     chroma_client = chromadb.PersistentClient(path="./chroma_data")
 
     try:
@@ -108,10 +112,18 @@ async def upload_document(file: UploadFile = File(...), chat_id: str = Query(Non
     if file.content_type not in ["application/pdf", "text/plain"]:
         raise HTTPException(status_code=400, detail="Unsupported file type")
     
+    # Configurable limits to reduce token consumption
+    MAX_FILE_SIZE = int(os.getenv("MAX_FILE_SIZE_MB", "5")) * 1024 * 1024  # Default 5MB
+    content = await file.read()
+    if len(content) > MAX_FILE_SIZE:
+        raise HTTPException(
+            status_code=400, 
+            detail=f"File too large. Maximum size is 5MB. Your file is {len(content) / (1024*1024):.1f}MB"
+        )
+    
     file_location = f"temp_{file.filename}"
     try:
-        content = await file.read()
-        
+        # Content already read above for size check
         def write_file():
             with open(file_location, "wb") as f:
                 f.write(content)
@@ -121,12 +133,26 @@ async def upload_document(file: UploadFile = File(...), chat_id: str = Query(Non
         if file.content_type == "application/pdf":
             reader = PyMuPDFReader()
             docs_from_pdf = await asyncio.to_thread(reader.load_data, file_location)
+            
+            # Limit PDF pages to reduce token consumption
+            MAX_PDF_PAGES = int(os.getenv("MAX_PDF_PAGES", "20"))
+            if len(docs_from_pdf) > MAX_PDF_PAGES:
+                docs_from_pdf = docs_from_pdf[:MAX_PDF_PAGES]
+                print(f"Warning: PDF truncated to first {MAX_PDF_PAGES} pages to reduce token consumption")
+            
             documents_list.extend(docs_from_pdf)
         elif file.content_type == "text/plain":
             def read_text_file():
                 with open(file_location, 'r', encoding='utf-8') as f:
                     return f.read()
             text_content = await asyncio.to_thread(read_text_file)
+            
+            # Limit text content to reduce token consumption
+            MAX_TEXT_LENGTH = int(os.getenv("MAX_TEXT_LENGTH", "50000"))  # ~12,500 tokens (rough estimate)
+            if len(text_content) > MAX_TEXT_LENGTH:
+                text_content = text_content[:MAX_TEXT_LENGTH]
+                print(f"Warning: Text file truncated to {MAX_TEXT_LENGTH} characters to reduce token consumption")
+            
             documents_list.append(Document(text=text_content, id_=file.filename))
         
         if not documents_list:
