@@ -39,7 +39,7 @@ A full-stack web application that allows users to upload documents (PDF and TXT)
 - **Frontend**: https://document-qa-system-psi.vercel.app/
 - **Backend API**: https://mydocqa.duckdns.org
 - **API Documentation**: https://mydocqa.duckdns.org/docs
-- **Demo Video**: [Watch Demo](https://drive.google.com/file/d/1-2-3-4-5/view?usp=sharing) - Complete walkthrough of the application
+- **Demo Video**: [Demo Link.mov](./Demo%20Link.mov) - Complete walkthrough of the application
 
 ### Demo Features Showcased:
 - 📄 Document upload (PDF and TXT files)
