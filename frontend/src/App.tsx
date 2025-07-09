@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { UploadPane } from './components/UploadPane';
 import { ChatWindow } from './components/ChatWindow';
 import { Sidebar } from './components/Sidebar';
-import { createChat, getChats, getChatMessages, deleteChat, deleteAllChats, getChatThreshold, updateChatThreshold } from './api/api';
+import { createChat, getChats, getChatMessages, deleteChat, deleteAllChats, getChatThreshold, updateChatThreshold, getChatDocuments } from './api/api';
 import { Message } from './types';
 
 interface ChatSession {
@@ -28,6 +28,7 @@ function App() {
   const [chats, setChats] = useState<ChatSession[]>([]);
   const [activeChatId, setActiveChatId] = useState<string | null>(null);
   const [currentMessages, setCurrentMessages] = useState<Message[]>([]);
+  const [activeChatDocuments, setActiveChatDocuments] = useState<any[]>([]);
   
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [theme, setTheme] = useState<'light' | 'dark'>('light');
@@ -255,6 +256,23 @@ function App() {
     }
   }, [activeChatId, chats]);
 
+  // Fetch documents for the active chat whenever it changes
+  useEffect(() => {
+    async function fetchDocuments() {
+      if (activeChatId) {
+        try {
+          const response = await getChatDocuments(activeChatId);
+          setActiveChatDocuments(response.data.documents || []);
+        } catch (error) {
+          setActiveChatDocuments([]);
+        }
+      } else {
+        setActiveChatDocuments([]);
+      }
+    }
+    fetchDocuments();
+  }, [activeChatId]);
+
   async function loadChats() {
     try {
       const response = await getChats();
@@ -346,10 +364,18 @@ function App() {
     }
   }
 
-  function handleUpload() {
-    // Create initial chat when document is uploaded
+  // When a document is uploaded, reload the documents for the active chat
+  async function handleUpload() {
     if (!activeChatId) {
-      startNewChat();
+      await startNewChat();
+    } else {
+      // Reload documents for the active chat
+      try {
+        const response = await getChatDocuments(activeChatId);
+        setActiveChatDocuments(response.data.documents || []);
+      } catch (error) {
+        setActiveChatDocuments([]);
+      }
     }
   }
 
@@ -410,6 +436,8 @@ function App() {
       <div className="flex-1 flex flex-col min-w-0">
         {!activeChatId ? (
           <UploadPane onUpload={handleUpload} chatId={undefined} />
+        ) : activeChatDocuments.length === 0 ? (
+          <UploadPane onUpload={handleUpload} chatId={activeChatId} />
         ) : (
           <ChatWindow
             session={{
