@@ -533,35 +533,6 @@ async def get_chat_threshold(chat_id: str):
         print(f"Error getting chat threshold: {e}")
         raise HTTPException(status_code=500, detail=f"Error getting chat threshold: {str(e)}")
 
-@app.get("/chats/")
-async def get_chats():
-    try:
-        pipeline = [
-            {"$sort": {"timestamp": -1}},
-            {"$group": {
-                "_id": "$chat_id",
-                "latest_question": {"$first": "$question"},
-                "latest_answer": {"$first": "$answer"},
-                "latest_timestamp": {"$first": "$timestamp"},
-                "message_count": {"$sum": 1}
-            }},
-            {"$sort": {"latest_timestamp": -1}}
-        ]
-        
-        chat_sessions = list(chats.aggregate(pipeline))
-        
-        for session in chat_sessions:
-            if isinstance(session.get("latest_timestamp"), datetime):
-                session["latest_timestamp"] = session["latest_timestamp"].isoformat()
-        
-        return JSONResponse({
-            "chats": chat_sessions
-        })
-        
-    except Exception as e:
-        print(f"Error retrieving chats: {e}")
-        raise HTTPException(status_code=500, detail=f"Error retrieving chats: {str(e)}")
-
 @app.get("/chats/{chat_id}/messages")
 async def get_chat_messages(chat_id: str):
     try:
@@ -619,7 +590,7 @@ async def delete_chat(chat_id: str):
         print(f"Error deleting chat: {e}")
         raise HTTPException(status_code=500, detail=f"Error deleting chat: {str(e)}")
 
-@app.delete("/chats/")
+@app.delete("/chats/all")
 async def delete_all_chats():
     try:
         print("Deleting all chats")
@@ -636,6 +607,35 @@ async def delete_all_chats():
     except Exception as e:
         print(f"Error deleting all chats: {e}")
         raise HTTPException(status_code=500, detail=f"Error deleting all chats: {str(e)}")
+
+@app.get("/chats/")
+async def get_chats():
+    try:
+        pipeline = [
+            {"$sort": {"timestamp": -1}},
+            {"$group": {
+                "_id": "$chat_id",
+                "latest_question": {"$first": "$question"},
+                "latest_answer": {"$first": "$answer"},
+                "latest_timestamp": {"$first": "$timestamp"},
+                "message_count": {"$sum": 1}
+            }},
+            {"$sort": {"latest_timestamp": -1}}
+        ]
+        
+        chat_sessions = list(chats.aggregate(pipeline))
+        
+        for session in chat_sessions:
+            if isinstance(session.get("latest_timestamp"), datetime):
+                session["latest_timestamp"] = session["latest_timestamp"].isoformat()
+        
+        return JSONResponse({
+            "chats": chat_sessions
+        })
+        
+    except Exception as e:
+        print(f"Error retrieving chats: {e}")
+        raise HTTPException(status_code=500, detail=f"Error retrieving chats: {str(e)}")
 
 @app.get("/chats/{chat_id}/documents")
 async def get_chat_documents(chat_id: str):
