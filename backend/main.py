@@ -590,7 +590,7 @@ async def delete_chat(chat_id: str):
         print(f"Error deleting chat: {e}")
         raise HTTPException(status_code=500, detail=f"Error deleting chat: {str(e)}")
 
-@app.delete("/chats/all")
+@app.delete("/clear-chats")
 async def delete_all_chats():
     try:
         print("Deleting all chats")
