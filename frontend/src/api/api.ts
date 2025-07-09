@@ -42,6 +42,10 @@ export async function deleteChat(chatId: string) {
   return axios.delete(`${BASE_URL}/chats/${chatId}`);
 }
 
+export async function deleteAllChats() {
+  return axios.delete(`${BASE_URL}/chats/`);
+}
+
 export async function getChatDocuments(chatId: string) {
   return axios.get(`${BASE_URL}/chats/${chatId}/documents`);
 }

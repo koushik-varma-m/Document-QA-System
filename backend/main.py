@@ -619,6 +619,24 @@ async def delete_chat(chat_id: str):
         print(f"Error deleting chat: {e}")
         raise HTTPException(status_code=500, detail=f"Error deleting chat: {str(e)}")
 
+@app.delete("/chats/")
+async def delete_all_chats():
+    try:
+        print("Deleting all chats")
+        
+        result = chats.delete_many({})
+        
+        print(f"Deleted {result.deleted_count} messages from all chats")
+        
+        return JSONResponse({
+            "message": f"All chat sessions deleted successfully. Removed {result.deleted_count} messages.",
+            "deleted_count": result.deleted_count
+        })
+        
+    except Exception as e:
+        print(f"Error deleting all chats: {e}")
+        raise HTTPException(status_code=500, detail=f"Error deleting all chats: {str(e)}")
+
 @app.get("/chats/{chat_id}/documents")
 async def get_chat_documents(chat_id: str):
     try:

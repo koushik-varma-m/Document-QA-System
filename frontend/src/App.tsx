@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { UploadPane } from './components/UploadPane';
 import { ChatWindow } from './components/ChatWindow';
 import { Sidebar } from './components/Sidebar';
-import { createChat, getChats, getChatMessages, deleteChat, getChatThreshold, updateChatThreshold } from './api/api';
+import { createChat, getChats, getChatMessages, deleteChat, deleteAllChats, getChatThreshold, updateChatThreshold } from './api/api';
 import { Message } from './types';
 
 interface ChatSession {
@@ -28,7 +28,6 @@ function App() {
   const [chats, setChats] = useState<ChatSession[]>([]);
   const [activeChatId, setActiveChatId] = useState<string | null>(null);
   const [currentMessages, setCurrentMessages] = useState<Message[]>([]);
-  const [isUploaded, setIsUploaded] = useState(false);
   
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [theme, setTheme] = useState<'light' | 'dark'>('light');
@@ -73,12 +72,11 @@ function App() {
 
   useEffect(() => {
     saveToLocalStorage();
-  }, [chats, activeChatId, currentMessages, isUploaded, sidebarCollapsed, theme, chatThresholds, userPreferences]);
+  }, [chats, activeChatId, currentMessages, sidebarCollapsed, theme, chatThresholds, userPreferences]);
 
   const loadFromLocalStorage = () => {
     try {
       const savedActiveChat = localStorage.getItem(STORAGE_KEYS.ACTIVE_CHAT);
-      const savedIsUploaded = localStorage.getItem(STORAGE_KEYS.IS_UPLOADED);
       
       const savedSidebarCollapsed = localStorage.getItem(STORAGE_KEYS.SIDEBAR_COLLAPSED);
       const savedTheme = localStorage.getItem(STORAGE_KEYS.THEME);
@@ -106,9 +104,6 @@ function App() {
         }
       }
       
-      if (savedIsUploaded) {
-        setIsUploaded(JSON.parse(savedIsUploaded));
-      }
       if (savedSidebarCollapsed) {
         setSidebarCollapsed(JSON.parse(savedSidebarCollapsed));
       }
@@ -150,8 +145,12 @@ function App() {
     }
   };
 
-  const clearAllLocalStorage = () => {
+  const clearAllLocalStorage = async () => {
     try {
+      // Delete all chats from the server
+      await deleteAllChats();
+      
+      // Clear localStorage
       Object.values(STORAGE_KEYS).forEach(key => {
         if (key !== STORAGE_KEYS.MESSAGES) {
           localStorage.removeItem(key);
@@ -168,7 +167,6 @@ function App() {
       setChats([]);
       setActiveChatId(null);
       setCurrentMessages([]);
-      setIsUploaded(false);
       setSidebarCollapsed(false);
       setTheme('light');
       setChatThresholds({});
@@ -180,9 +178,10 @@ function App() {
         webSearchAuto: true
       });
       
-      console.log('All localStorage data cleared');
+      console.log('All chats deleted from server and localStorage data cleared');
     } catch (error) {
-      console.error('Error clearing localStorage:', error);
+      console.error('Error clearing all chats:', error);
+      alert('Failed to clear all chats. Please try again.');
     }
   };
 
@@ -355,9 +354,6 @@ function App() {
       setActiveChatId(newChatId);
       setCurrentMessages([]);
       
-      // Force isUploaded to false for new chats to show upload option
-      setIsUploaded(false);
-      
       // Refresh the chat list to show the new chat
       await loadChats();
     } catch (error) {
@@ -366,7 +362,6 @@ function App() {
   }
 
   function handleUpload() {
-    setIsUploaded(true);
     // Create initial chat when document is uploaded
     if (!activeChatId) {
       startNewChat();
@@ -428,8 +423,8 @@ function App() {
       
       {/* Main content area */}
       <div className="flex-1 flex flex-col min-w-0">
-        {!isUploaded && (!activeChatId || (activeChatId && chats.find(c => c._id === activeChatId)?.latest_question === "Chat started")) ? (
-          <UploadPane onUpload={handleUpload} chatId={activeChatId || undefined} />
+        {!activeChatId ? (
+          <UploadPane onUpload={handleUpload} chatId={undefined} />
         ) : (
           <ChatWindow
             session={{
