@@ -128,7 +128,7 @@ function App() {
       } else {
         localStorage.removeItem(STORAGE_KEYS.ACTIVE_CHAT);
       }
-      localStorage.setItem(STORAGE_KEYS.IS_UPLOADED, JSON.stringify(isUploaded));
+
       
       localStorage.setItem(STORAGE_KEYS.SIDEBAR_COLLAPSED, JSON.stringify(sidebarCollapsed));
       localStorage.setItem(STORAGE_KEYS.THEME, JSON.stringify(theme));
@@ -244,20 +244,11 @@ function App() {
       
       loadChatMessages(activeChatId);
       loadChatThreshold(activeChatId); // Load chat-specific threshold
-      // Check if this chat has content to determine whether to show upload pane or chat window
-      const activeChat = chats.find(chat => chat._id === activeChatId);
-      if (activeChat) {
-        const hasContent = activeChat.latest_question !== "Chat started" && activeChat.message_count > 1;
-        if (hasContent) {
-          setIsUploaded(true);
-        } else {
-          setIsUploaded(false);
-        }
-      }
+      // Load chat messages and threshold for the active chat
+      loadChatMessages(activeChatId);
+      loadChatThreshold(activeChatId);
     } else {
-      // If no valid activeChatId, show upload pane
-      setIsUploaded(false);
-      // Clear any invalid activeChatId from state
+      // If no valid activeChatId, clear any invalid activeChatId from state
       if (activeChatId) {
         setActiveChatId(null);
       }
@@ -277,14 +268,8 @@ function App() {
       
       setChats(mergedChats);
       
-      // Don't automatically set isUploaded to true when loading chats
-      // Only set it if there are chats with actual content (not just empty placeholders)
-      const hasContentChats = mergedChats.some((chat: any) => 
-        chat.latest_question !== "Chat started" && chat.message_count > 1
-      );
-      if (hasContentChats && !isUploaded) {
-        setIsUploaded(true);
-      }
+      // Set chats in state
+      setChats(mergedChats);
     } catch (error) {
       console.error('Error loading chats:', error);
     }
