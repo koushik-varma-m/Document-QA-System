@@ -4,7 +4,7 @@ const config = {
     backendUrl: 'http://localhost:8000'
   },
   production: {
-    backendUrl: process.env.REACT_APP_BACKEND_URL || 'https://mydocqa.duckdns.org'
+    backendUrl: process.env.REACT_APP_BACKEND_URL || 'http://54.165.206.10'
   }
 };
 
